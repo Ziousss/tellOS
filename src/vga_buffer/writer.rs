@@ -67,6 +67,15 @@ impl Writer {
         self.column_position = 0;
     }
 
+    pub fn clear_screen(&mut self) {
+        for row in 0..BUFFER_HEIGHT{
+            self.clear_row(row);
+        }
+
+        self.column_position = 0;
+    }
+
+
     fn clear_row(&mut self, row: usize) {
         let blank = ScreenChar {
             ascii_character: b' ',

@@ -2,11 +2,13 @@
 #![allow(internal_features)]
 #![no_std]
 
+use crate::vga_buffer::clear_screen;
 mod vga_buffer;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_init() {
-    println!("Hello world\n");
+    clear_screen();
+    print!("Hello world!");
 }
 
 #[lang = "eh_personality"]
