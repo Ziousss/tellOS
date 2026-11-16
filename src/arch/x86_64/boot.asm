@@ -5,7 +5,7 @@ extern long_mode_start
 
 section .bss
 boot_stack_bottom:
-    resb 64
+    resb 131072
 boot_stack_top:
 
 section .rodata
