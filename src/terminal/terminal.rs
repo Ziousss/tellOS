@@ -1,3 +1,6 @@
+// This file is here to handle everything that has a link
+// with the OS' terminal.
+
 use crate::print;
 use core::arch::asm;
 use crate::interrupts_handler;
@@ -6,6 +9,7 @@ pub fn run() {
     let mut line_len: usize = 0;
     prompt();
 
+    //Waiting for something to happen.
     loop {
         unsafe { asm!("hlt", options(nomem, nostack, preserves_flags)); }
 
@@ -19,6 +23,7 @@ fn prompt() {
     print!("tellOS-Terminal: ");
 }
 
+// Here to handle special input such that 0x08 (del), etc.
 fn handle_key(c: u8, line_len: &mut usize) {
     match c {
         0x08 => {

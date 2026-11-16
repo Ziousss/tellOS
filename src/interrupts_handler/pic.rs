@@ -1,5 +1,9 @@
+// This file handles the "creation" and initialisation of
+// Programmable Interrupt Controllers (PIC) and chained PIC
+// to allow the use of slave command and data.
+//
+// PIC are crucial as they are the way to handle hardware interrupt..
 use core::arch::asm;
-
 
 pub(super) const MASTER_COMMAND: u16 = 0x20;
 pub(super) const SLAVE_COMMAND: u16 = 0xa0;

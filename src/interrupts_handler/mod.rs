@@ -12,8 +12,6 @@ mod handlers;
 
 pub use handlers::pop_key;
 
-
-
 static mut IDT: Idt = Idt::new();
 
 pub fn read_cs() -> u16 {
@@ -24,6 +22,13 @@ pub fn read_cs() -> u16 {
     cs
 }
 
+// Initialises the Interrupt Descriptor Table (IDT) and configures
+// the interrupt handlers.
+//
+// Then initialises a chained Programmable Interrupt Controllers
+// (PICs), remapping hardware IRQs to the configured interrupt offsets.
+//
+// Finally, we execute sti to enable hardware interrupts.
 pub fn init() {
     let selector = read_cs();
     let attribute = PRESENT | DPL_KERNEL | GATE_INTERRUPT;

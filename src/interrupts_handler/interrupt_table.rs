@@ -1,3 +1,6 @@
+// This file handles eveything regarding the
+// Interrupt Decriptor Table (IDT) initialisation.
+
 use core::arch::asm;
 
 const IDT_ENTRY_LENGTH: usize = 16;
@@ -19,6 +22,7 @@ pub struct Idtr {
     base: u64,
 }
 
+// Need three fields for the address for legacy reasons.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(C)]
 pub struct IdtEntry {
@@ -46,6 +50,7 @@ pub struct InterruptStackFrame {
     pub ss: u64
 }
 
+// Making sure the size are right.
 const _: () = assert!(size_of::<Idtr>() == IDTR_LENGTH);
 const _: () = assert!(size_of::<IdtEntry>() == IDT_ENTRY_LENGTH);
 const _: () = assert!(size_of::<Idt>() == IDT_LENGTH);

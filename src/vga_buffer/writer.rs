@@ -25,6 +25,9 @@ pub struct Writer {
 }
 
 impl Writer {
+    // Main Writer function.
+    // Takes a byte and see how it should print it depending
+    // on its value (and flags such sa SHIFT or CTRL later).
     pub fn write_byte(&mut self, byte: u8) {
         match byte {
             b'\n' => { 
@@ -120,6 +123,7 @@ impl Writer {
         for byte in s.bytes() {
             match byte {
                 0x20..=0x7e | b'\n' | b'\r' | b'\t' | 0x08 => self.write_byte(byte),
+                // non writtable byte.
                 _ => self.write_byte(0xfe),
             }
         }
