@@ -19,8 +19,6 @@ pub extern "C" fn rust_init() {
     interrupts_handler::init();
     println!("Terminal ready to use!!");
 
-    unsafe { asm!("mov rsp, 0", "int3")}
-
     // Put in another file for clarity.
     terminal::run();
 }

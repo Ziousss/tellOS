@@ -101,3 +101,19 @@ pub unsafe fn inb(port: u16) -> u8 {
 pub fn io_wait(){
     unsafe { outb(WAIT_PORT, 0); }
 }
+
+const PIT_INPUT_HZ: u32 = 1_193_182;
+pub const TIMER_HZ: u32 = 100;
+const PIT_DIVISOR:u16 = (PIT_INPUT_HZ / TIMER_HZ) as u16;
+
+const PIT_COMMAND: u8 = 0x36;
+const PIT_PORT_COMMAND: u16 = 0x43;
+const PIT_CHANNEL_PORT: u16 = 0x40;
+
+pub fn pit_init() {
+    unsafe {
+        outb(PIT_PORT_COMMAND, PIT_COMMAND);
+        outb(PIT_CHANNEL_PORT, (PIT_DIVISOR & 0xff) as u8);
+        outb(PIT_CHANNEL_PORT, (PIT_DIVISOR >> 8) as u8);
+    }
+}

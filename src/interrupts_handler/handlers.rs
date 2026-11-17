@@ -1,7 +1,7 @@
 // This file contains all the function to handle the
 // different interrupt the OS might encounter.
 
-use crate::{interrupts_handler::{pic::{CMD_END, MASTER_COMMAND, SLAVE_COMMAND, inb, outb}, read_cr2}, println};
+use crate::{interrupts_handler::{pic::{CMD_END, MASTER_COMMAND, SLAVE_COMMAND, TIMER_HZ, inb, outb}, read_cr2}, println};
 use core::{sync::atomic::{AtomicBool, AtomicU8, AtomicU64, AtomicUsize, Ordering}};
 use super::interrupt_table::InterruptStackFrame;
 use core::arch::asm;
@@ -14,8 +14,8 @@ static BUFFER: [AtomicU8; BUFFER_SIZE] = [const { AtomicU8::new(0) }; BUFFER_SIZ
 static SCANCODE_TO_LOWER_ASCII: [u8; 128] = build_lower_table();
 static SCANCODE_TO_UPPER_ASCII: [u8; 128] = build_caps_table();
 
-const PIT_HZ_X1000: u64 = 18_207;
 const BUFFER_SIZE: usize = 128;
+
 static CTRL_PRESSED: AtomicBool = AtomicBool::new(false);
 static SHIFT_PRESSED: AtomicBool = AtomicBool::new(false);
 static CAPS_LOCK_PRESSED: AtomicBool = AtomicBool::new(false);
@@ -159,7 +159,7 @@ fn push_alt(lower: u8) {
 
 // Returns in seconds
 pub fn read_timer_seconds() -> u64 {
-    TIMER.load(Ordering::Relaxed) * 1000 / PIT_HZ_X1000
+    TIMER.load(Ordering::Relaxed) / TIMER_HZ as u64
 }
 
 pub fn end_of_interrupt(vector: u8) {

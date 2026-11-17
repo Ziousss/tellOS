@@ -1,5 +1,5 @@
 use core::arch::asm;
-use crate::interrupts_handler::{gdt::gdt_init, handlers::{KEYBOARD_VECTOR, PIC_1_OFFSET, PIC_2_OFFSET, TIMER_VECTOR, divide_error_handler, double_fault_handler, gpf_handler, invalid_opcode_handler, keyboard_handler, page_fault_handler}, pic::ChainedPics};
+use crate::interrupts_handler::{gdt::gdt_init, handlers::{KEYBOARD_VECTOR, PIC_1_OFFSET, PIC_2_OFFSET, TIMER_VECTOR, divide_error_handler, double_fault_handler, gpf_handler, invalid_opcode_handler, keyboard_handler, page_fault_handler}, pic::{ChainedPics, pit_init}};
 use handlers::{breakpoint_handler, timer_handler};
 
 use self::interrupt_table::{
@@ -71,6 +71,8 @@ pub fn init() {
 
     let mut pics = ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET);
     pics.initialise();
+
+    pit_init();
 
     unsafe { asm!("sti", options(nomem, nostack)); }
 }
