@@ -1,7 +1,7 @@
 // This file is here to handle everything that has a link
 // with the OS' terminal.
 
-use crate::terminal::built_in::{help_builtin, uptime_builtin, echo_builtin};
+use crate::terminal::built_in::{clear_builtin, echo_builtin, help_builtin, uptime_builtin};
 use crate::{print, println};
 use core::{arch::asm, str::from_utf8};
 use crate::interrupts_handler;
@@ -134,6 +134,10 @@ fn command_handle(line_struct: &mut Line) {
         // Echo handle
         (Some("echo"), None, None) => println!("echo takes at least one argument"),
         (Some("echo"), Some(_), _) => echo_builtin(original),
+
+        // Clear handle
+        (Some("clear"), None, None) => clear_builtin(),
+        (Some("clear"), _, _) => println!("clear takes no argument"),
         (Some(other), _, _) => println!("{}: command not found", other),
         (None, _, _) => {}
     }

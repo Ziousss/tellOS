@@ -35,6 +35,7 @@ fn unlock_screen() {
     unsafe { crate::vga_buffer::WRITER.force_unlock(); }
 }
 
+// interrupt 0
 pub extern "x86-interrupt" fn divide_error_handler (frame: InterruptStackFrame) -> ! {
     unlock_screen();
     println!("EXCEPTION: divide error");
@@ -42,10 +43,12 @@ pub extern "x86-interrupt" fn divide_error_handler (frame: InterruptStackFrame) 
     halt_forever()
 }
 
+// interrupt 3
 pub extern "x86-interrupt" fn breakpoint_handler(frame: InterruptStackFrame) {
     println!("RIP = {:#x}", frame.rip);
 }
 
+// interrupt 6
 pub extern "x86-interrupt" fn invalid_opcode_handler (frame: InterruptStackFrame) -> ! {
     unlock_screen();
     println!("EXCEPTION: invalid opcode");
@@ -53,6 +56,16 @@ pub extern "x86-interrupt" fn invalid_opcode_handler (frame: InterruptStackFrame
     halt_forever()
 }
 
+pub extern "x86-interrupt" fn double_fault_handler (frame: InterruptStackFrame, error_code: u64) -> ! {
+    unlock_screen();
+    println!("EXCEPTION: Double fault detected");
+    println!("error code = {:#x}", error_code);
+    println!("RIP = {:#x}", frame.rip);
+    halt_forever()
+}
+
+
+// interrupt 13
 pub extern "x86-interrupt" fn gpf_handler(frame: InterruptStackFrame, error_code: u64) -> ! {
     unlock_screen();
     println!("EXCEPTION: general protection fault");
@@ -61,6 +74,7 @@ pub extern "x86-interrupt" fn gpf_handler(frame: InterruptStackFrame, error_code
     halt_forever()
 }
 
+// interrupt 14
 pub extern "x86-interrupt" fn page_fault_handler (frame: InterruptStackFrame, error_code: u64) -> ! {
     unlock_screen();
     println!("EXCEPTION: page fault");
@@ -70,11 +84,13 @@ pub extern "x86-interrupt" fn page_fault_handler (frame: InterruptStackFrame, er
     halt_forever()
 }
 
+// interrupt 32
 pub extern "x86-interrupt" fn timer_handler(_frame: InterruptStackFrame) {
     TIMER.fetch_add(1, Ordering::Relaxed);
     end_of_interrupt(TIMER_VECTOR);
 }
 
+// interrupt 33
 pub extern "x86-interrupt" fn keyboard_handler(_frame: InterruptStackFrame) {
     let value = unsafe { inb(0x60) };
 

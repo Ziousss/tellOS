@@ -1,5 +1,5 @@
 use core::arch::asm;
-use crate::interrupts_handler::{handlers::{KEYBOARD_VECTOR, PIC_1_OFFSET, PIC_2_OFFSET, TIMER_VECTOR, divide_error_handler, gpf_handler, invalid_opcode_handler, keyboard_handler, page_fault_handler}, pic::ChainedPics};
+use crate::interrupts_handler::{gdt::gdt_init, handlers::{KEYBOARD_VECTOR, PIC_1_OFFSET, PIC_2_OFFSET, TIMER_VECTOR, divide_error_handler, double_fault_handler, gpf_handler, invalid_opcode_handler, keyboard_handler, page_fault_handler}, pic::ChainedPics};
 use handlers::{breakpoint_handler, timer_handler};
 
 use self::interrupt_table::{
@@ -9,10 +9,13 @@ use self::interrupt_table::{
 mod interrupt_table;
 mod pic;
 mod handlers;
+mod gdt;
 
 pub use handlers::{pop_key, read_timer_seconds};
 
 static mut IDT: Idt = Idt::new();
+
+const DOUBLE_FAULT_IST: u8 = 1;
 
 pub fn read_cs() -> u16 {
     let cs: u16;
@@ -38,12 +41,15 @@ pub fn read_cr2() -> u64 {
 //
 // Finally, we execute sti to enable hardware interrupts.
 pub fn init() {
+    gdt_init();
+
     let selector = read_cs();
     let attribute = PRESENT | DPL_KERNEL | GATE_INTERRUPT;
 
     let entry_0 = IdtEntry::new(divide_error_handler as *const () as usize as u64, attribute, selector);
     let entry_3 = IdtEntry::new(breakpoint_handler as *const () as usize as u64, attribute, selector);
     let entry_6 = IdtEntry::new(invalid_opcode_handler as *const () as usize as u64, attribute, selector);
+    let entry_8 = IdtEntry::new(double_fault_handler as *const () as usize as u64, attribute, selector).with_ist(DOUBLE_FAULT_IST);
     let entry_13 = IdtEntry::new(gpf_handler as *const () as usize as u64, attribute, selector);
     let entry_14 = IdtEntry::new(page_fault_handler as *const () as usize as u64, attribute, selector);
     let timer_entry = IdtEntry::new(timer_handler as *const() as usize as u64, attribute, selector);
@@ -54,6 +60,7 @@ pub fn init() {
         idt.set_entry(0, entry_0);
         idt.set_entry(3, entry_3);
         idt.set_entry(6, entry_6);
+        idt.set_entry(8, entry_8);
         idt.set_entry(13, entry_13);
         idt.set_entry(14, entry_14);
 

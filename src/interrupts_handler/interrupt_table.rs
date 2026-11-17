@@ -69,6 +69,11 @@ impl IdtEntry {
         }
     }
 
+    pub const fn with_ist(mut self, index: u8) -> Self{
+        self.ist_index = index & 0b111;
+        self
+    } 
+
     pub fn new(handler_addr: u64, attribute: u8, selector: u16) -> Self {        
         Self { 
             handler_lowest_16: handler_addr as u16, 

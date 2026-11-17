@@ -1,5 +1,6 @@
 use core::str::SplitAsciiWhitespace;
 
+use crate::vga_buffer::clear_screen;
 use crate::{println, print};
 use crate::interrupts_handler::read_timer_seconds;
 
@@ -7,10 +8,10 @@ use crate::interrupts_handler::read_timer_seconds;
 pub fn help_builtin () {
     println!("Available functions:");
     println!();
+    println!("- clear: Clears the screen");
     println!("- echo: Prints to the terminal whatever it is given. Takes one argument");
     println!("- help: Prints all available functions, takes no argument");
-    print!("- uptime: Gives the uptime of the machine");
-    println!();
+    println!("- uptime: Gives the uptime of the machine");
 }
 
 pub fn uptime_builtin() {
@@ -70,4 +71,8 @@ pub fn echo_builtin(mut words: SplitAsciiWhitespace<'_>) {
     if newline {
         println!();
     }
+}
+
+pub fn clear_builtin () {
+    clear_screen();
 }
