@@ -3,6 +3,8 @@
 #![no_std]
 #![feature(abi_x86_interrupt)]
 
+use core::arch::asm;
+
 use crate::vga_buffer::clear_screen;
 
 mod vga_buffer;
@@ -25,6 +27,10 @@ pub extern "C" fn rust_init() {
 pub extern "C" fn eh_personality() {}
 
 #[panic_handler]
-fn panic(_info: &core::panic::PanicInfo) -> ! {
-    loop {}
+fn panic(info: &core::panic::PanicInfo) -> ! {
+    unsafe { crate::vga_buffer::WRITER.force_unlock(); }
+    println!("KERNEL PANIC: {}", info);
+    loop {
+        unsafe { asm!("hlt", options(nomem, nostack, preserves_flags)); }
+    }
 }

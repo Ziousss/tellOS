@@ -1,9 +1,10 @@
 // This file contains all the function to handle the
 // different interrupt the OS might encounter.
 
-use crate::{interrupts_handler::pic::{CMD_END, MASTER_COMMAND, SLAVE_COMMAND, inb, outb}, println};
-use core::sync::atomic::{Ordering, AtomicBool, AtomicU8, AtomicU64, AtomicUsize};
+use crate::{interrupts_handler::{pic::{CMD_END, MASTER_COMMAND, SLAVE_COMMAND, inb, outb}, read_cr2}, println};
+use core::{sync::atomic::{AtomicBool, AtomicU8, AtomicU64, AtomicUsize, Ordering}};
 use super::interrupt_table::InterruptStackFrame;
+use core::arch::asm;
 
 static TIMER: AtomicU64 = AtomicU64::new(0);
 
@@ -13,7 +14,7 @@ static BUFFER: [AtomicU8; BUFFER_SIZE] = [const { AtomicU8::new(0) }; BUFFER_SIZ
 static SCANCODE_TO_LOWER_ASCII: [u8; 128] = build_lower_table();
 static SCANCODE_TO_UPPER_ASCII: [u8; 128] = build_caps_table();
 
-
+const PIT_HZ_X1000: u64 = 18_207;
 const BUFFER_SIZE: usize = 128;
 static CTRL_PRESSED: AtomicBool = AtomicBool::new(false);
 static SHIFT_PRESSED: AtomicBool = AtomicBool::new(false);
@@ -26,8 +27,47 @@ pub(super) const PIC_2_OFFSET: u8 = 40;
 pub(super) const TIMER_VECTOR: u8 = PIC_1_OFFSET;
 pub(super) const KEYBOARD_VECTOR: u8 = PIC_1_OFFSET + 1;
 
-pub extern "x86-interrupt" fn breakpoint_handler(_frame: InterruptStackFrame) {
-    println!("RIP = {:#x}", _frame.rip);
+fn halt_forever() -> ! {
+    loop { unsafe { asm!("hlt", options(nomem, nostack, preserves_flags)); } }
+}
+
+fn unlock_screen() {
+    unsafe { crate::vga_buffer::WRITER.force_unlock(); }
+}
+
+pub extern "x86-interrupt" fn divide_error_handler (frame: InterruptStackFrame) -> ! {
+    unlock_screen();
+    println!("EXCEPTION: divide error");
+    println!("RIP = {:#x}", frame.rip);
+    halt_forever()
+}
+
+pub extern "x86-interrupt" fn breakpoint_handler(frame: InterruptStackFrame) {
+    println!("RIP = {:#x}", frame.rip);
+}
+
+pub extern "x86-interrupt" fn invalid_opcode_handler (frame: InterruptStackFrame) -> ! {
+    unlock_screen();
+    println!("EXCEPTION: invalid opcode");
+    println!("RIP = {:#x}", frame.rip);
+    halt_forever()
+}
+
+pub extern "x86-interrupt" fn gpf_handler(frame: InterruptStackFrame, error_code: u64) -> ! {
+    unlock_screen();
+    println!("EXCEPTION: general protection fault");
+    println!("RIP = {:#x}", frame.rip);
+    println!("error code = {:#x}", error_code);
+    halt_forever()
+}
+
+pub extern "x86-interrupt" fn page_fault_handler (frame: InterruptStackFrame, error_code: u64) -> ! {
+    unlock_screen();
+    println!("EXCEPTION: page fault");
+    println!("address = {:#x}", read_cr2());
+    println!("RIP = {:#x}", frame.rip);
+    println!("error code = {:#b}", error_code);
+    halt_forever()
 }
 
 pub extern "x86-interrupt" fn timer_handler(_frame: InterruptStackFrame) {
@@ -101,9 +141,9 @@ fn push_alt(lower: u8) {
     }
 }
 
-#[allow(dead_code)]
-pub fn read_timer() -> u64 {
-    TIMER.load(Ordering::Relaxed)
+// Returns in seconds
+pub fn read_timer_seconds() -> u64 {
+    TIMER.load(Ordering::Relaxed) * 1000 / PIT_HZ_X1000
 }
 
 pub fn end_of_interrupt(vector: u8) {

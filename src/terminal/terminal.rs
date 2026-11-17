@@ -1,9 +1,11 @@
 // This file is here to handle everything that has a link
 // with the OS' terminal.
 
-use crate::print;
-use core::arch::asm;
+use crate::terminal::built_in::{help_builtin, uptime_builtin};
+use crate::{print, println};
+use core::{arch::asm, str::from_utf8};
 use crate::interrupts_handler;
+
 
 const LINE_CAPACITY: usize = 256;
 
@@ -61,6 +63,7 @@ fn handle_key(c: u8, line_struct: &mut Line) {
             }
         }
         b'\n' => {
+            command_handle(line_struct);
             print!("\n");
             line_struct.len = 0;
             prompt();
@@ -106,4 +109,24 @@ fn delete_last(line_struct: &mut Line) {
     line_struct.len -= 1;
     line_struct.buf[line_struct.len] = 0;
     print!("\x08");
+}
+
+fn command_handle(line_struct: &mut Line) {
+    let len = line_struct.len;
+    let text = from_utf8(&line_struct.buf[..len]).unwrap_or("");
+    let mut words = text.split_ascii_whitespace();
+
+    let command = words.next();
+    let arg_1 = words.next();
+
+    println!();
+
+    match (command, arg_1) {
+        (Some("uptime"), Some(_)) => print!("Uptime takes no argument"),
+        (Some("uptime"), None) => uptime_builtin(),
+        (Some("help"), None) => help_builtin(),
+        (Some("help"), Some(_)) => print!("Help takes no argument."),
+        (Some(other), _) => print!("{}: command not found", other),
+        (None, _) => {}
+    }
 }
