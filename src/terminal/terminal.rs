@@ -1,7 +1,7 @@
 // This file is here to handle everything that has a link
 // with the OS' terminal.
 
-use crate::terminal::built_in::{help_builtin, uptime_builtin};
+use crate::terminal::built_in::{help_builtin, uptime_builtin, echo_builtin};
 use crate::{print, println};
 use core::{arch::asm, str::from_utf8};
 use crate::interrupts_handler;
@@ -64,7 +64,6 @@ fn handle_key(c: u8, line_struct: &mut Line) {
         }
         b'\n' => {
             command_handle(line_struct);
-            print!("\n");
             line_struct.len = 0;
             prompt();
         }
@@ -115,18 +114,27 @@ fn command_handle(line_struct: &mut Line) {
     let len = line_struct.len;
     let text = from_utf8(&line_struct.buf[..len]).unwrap_or("");
     let mut words = text.split_ascii_whitespace();
+    let original = words.clone();
 
     let command = words.next();
     let arg_1 = words.next();
+    let arg_2 = words.next();
 
     println!();
 
-    match (command, arg_1) {
-        (Some("uptime"), Some(_)) => print!("Uptime takes no argument"),
-        (Some("uptime"), None) => uptime_builtin(),
-        (Some("help"), None) => help_builtin(),
-        (Some("help"), Some(_)) => print!("Help takes no argument."),
-        (Some(other), _) => print!("{}: command not found", other),
-        (None, _) => {}
+    match (command, arg_1, arg_2) {
+        // Uptime handle
+        (Some("uptime"), Some(_), _) => println!("uptime takes no argument"),
+        (Some("uptime"), None, None) => uptime_builtin(),
+
+        // Help handle
+        (Some("help"), None, None) => help_builtin(),
+        (Some("help"), Some(_), _) => println!("help takes no argument."),
+
+        // Echo handle
+        (Some("echo"), None, None) => println!("echo takes at least one argument"),
+        (Some("echo"), Some(_), _) => echo_builtin(original),
+        (Some(other), _, _) => println!("{}: command not found", other),
+        (None, _, _) => {}
     }
 }
