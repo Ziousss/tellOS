@@ -1,10 +1,16 @@
 // This file contains all the function to handle the
 // different interrupt the OS might encounter.
 
-use crate::{interrupts_handler::{pic::{CMD_END, MASTER_COMMAND, SLAVE_COMMAND, TIMER_HZ, inb, outb}, read_cr2}, println};
-use core::{sync::atomic::{AtomicBool, AtomicU8, AtomicU64, AtomicUsize, Ordering}};
 use super::interrupt_table::InterruptStackFrame;
+use crate::{
+    interrupts_handler::{
+        pic::{CMD_END, MASTER_COMMAND, SLAVE_COMMAND, TIMER_HZ, inb, outb},
+        read_cr2,
+    },
+    println,
+};
 use core::arch::asm;
+use core::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, AtomicUsize, Ordering};
 
 static TIMER: AtomicU64 = AtomicU64::new(0);
 
@@ -28,15 +34,21 @@ pub(super) const TIMER_VECTOR: u8 = PIC_1_OFFSET;
 pub(super) const KEYBOARD_VECTOR: u8 = PIC_1_OFFSET + 1;
 
 fn halt_forever() -> ! {
-    loop { unsafe { asm!("hlt", options(nomem, nostack, preserves_flags)); } }
+    loop {
+        unsafe {
+            asm!("hlt", options(nomem, nostack, preserves_flags));
+        }
+    }
 }
 
 fn unlock_screen() {
-    unsafe { crate::vga_buffer::WRITER.force_unlock(); }
+    unsafe {
+        crate::vga_buffer::WRITER.force_unlock();
+    }
 }
 
 // interrupt 0
-pub extern "x86-interrupt" fn divide_error_handler (frame: InterruptStackFrame) -> ! {
+pub extern "x86-interrupt" fn divide_error_handler(frame: InterruptStackFrame) -> ! {
     unlock_screen();
     println!("EXCEPTION: divide error");
     println!("RIP = {:#x}", frame.rip);
@@ -49,21 +61,27 @@ pub extern "x86-interrupt" fn breakpoint_handler(frame: InterruptStackFrame) {
 }
 
 // interrupt 6
-pub extern "x86-interrupt" fn invalid_opcode_handler (frame: InterruptStackFrame) -> ! {
+pub extern "x86-interrupt" fn invalid_opcode_handler(frame: InterruptStackFrame) -> ! {
     unlock_screen();
     println!("EXCEPTION: invalid opcode");
     println!("RIP = {:#x}", frame.rip);
     halt_forever()
 }
 
-pub extern "x86-interrupt" fn double_fault_handler (frame: InterruptStackFrame, error_code: u64) -> ! {
+pub extern "x86-interrupt" fn double_fault_handler(
+    frame: InterruptStackFrame,
+    error_code: u64,
+) -> ! {
     unlock_screen();
     println!("EXCEPTION: Double fault detected");
     println!("error code = {:#x}", error_code);
     println!("RIP = {:#x}", frame.rip);
+    println!("SS = {:#x}", frame.ss);
+    println!("CS = {:#x}", frame.cs);
+    println!("RSP = {:#x}", frame.rsp);
+    println!("rflags = {:#x}", frame.rflags);
     halt_forever()
 }
-
 
 // interrupt 13
 pub extern "x86-interrupt" fn gpf_handler(frame: InterruptStackFrame, error_code: u64) -> ! {
@@ -75,7 +93,7 @@ pub extern "x86-interrupt" fn gpf_handler(frame: InterruptStackFrame, error_code
 }
 
 // interrupt 14
-pub extern "x86-interrupt" fn page_fault_handler (frame: InterruptStackFrame, error_code: u64) -> ! {
+pub extern "x86-interrupt" fn page_fault_handler(frame: InterruptStackFrame, error_code: u64) -> ! {
     unlock_screen();
     println!("EXCEPTION: page fault");
     println!("address = {:#x}", read_cr2());
@@ -99,7 +117,9 @@ pub extern "x86-interrupt" fn keyboard_handler(_frame: InterruptStackFrame) {
         0x9d => CTRL_PRESSED.store(false, Ordering::Relaxed),
         0x2a | 0x36 => SHIFT_PRESSED.store(true, Ordering::Relaxed),
         0xaa | 0xb6 => SHIFT_PRESSED.store(false, Ordering::Relaxed),
-        0x3a => { CAPS_LOCK_PRESSED.fetch_xor(true, Ordering::Relaxed); }
+        0x3a => {
+            CAPS_LOCK_PRESSED.fetch_xor(true, Ordering::Relaxed);
+        }
         0x38 => ALT_PRESSED.store(true, Ordering::Relaxed),
         0xb8 => ALT_PRESSED.store(false, Ordering::Relaxed),
         v if (v & 0x80) == 0 => {
@@ -125,7 +145,11 @@ fn translate(value: u8) -> Option<u8> {
     let alt = ALT_PRESSED.load(Ordering::Relaxed);
 
     if ctrl {
-        return if lower.is_ascii_lowercase() { Some(lower & 0x1F) } else { None };
+        return if lower.is_ascii_lowercase() {
+            Some(lower & 0x1F)
+        } else {
+            None
+        };
     }
 
     if alt {
@@ -196,9 +220,9 @@ const fn build_lower_table() -> [u8; 128] {
         r += 1;
     }
 
-    t[0x39] = b' ';    // space
-    t[0x1C] = b'\n';   // enter
-    t[0x0E] = 8;       // backspace, handled separately later
+    t[0x39] = b' '; // space
+    t[0x1C] = b'\n'; // enter
+    t[0x0E] = 8; // backspace, handled separately later
     t
 }
 
@@ -224,9 +248,9 @@ const fn build_caps_table() -> [u8; 128] {
         r += 1;
     }
 
-    t[0x39] = b' ';    // space
-    t[0x1C] = b'\n';   // enter
-    t[0x0E] = 8;       // backspace, handled separately later
+    t[0x39] = b' '; // space
+    t[0x1C] = b'\n'; // enter
+    t[0x0E] = 8; // backspace, handled separately later
     t
 }
 
@@ -236,7 +260,7 @@ fn push_key(ascii: u8) {
     let tail = TAIL.load(Ordering::Acquire);
 
     if next == tail {
-        return
+        return;
     }
 
     BUFFER[head].store(ascii, Ordering::Relaxed);
@@ -253,6 +277,6 @@ pub fn pop_key() -> Option<u8> {
 
     let ascii = BUFFER[tail].load(Ordering::Relaxed);
     TAIL.store((tail + 1) % BUFFER_SIZE, Ordering::Release);
-    
+
     Some(ascii)
 }

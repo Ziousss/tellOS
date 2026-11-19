@@ -19,26 +19,26 @@ pub(super) const WAIT_PORT: u16 = 0x80;
 struct Pic {
     offset: u8,
     command: u16,
-    data: u16
+    data: u16,
 }
 
 pub struct ChainedPics {
-    pics: [Pic; 2]
+    pics: [Pic; 2],
 }
 
 impl ChainedPics {
     pub const fn new(offset1: u8, offset2: u8) -> ChainedPics {
-        ChainedPics { 
+        ChainedPics {
             pics: [
                 Pic {
                     offset: offset1,
                     command: MASTER_COMMAND,
-                    data: MASTER_DATA
+                    data: MASTER_DATA,
                 },
                 Pic {
                     offset: offset2,
                     command: SLAVE_COMMAND,
-                    data: SLAVE_DATA
+                    data: SLAVE_DATA,
                 },
             ],
         }
@@ -76,9 +76,9 @@ impl ChainedPics {
 
 pub unsafe fn outb(port: u16, value: u8) {
     unsafe {
-        asm!("out dx, al", 
-            in("dx") port, 
-            in("al") value, 
+        asm!("out dx, al",
+            in("dx") port,
+            in("al") value,
             options(nomem, nostack, preserves_flags)
         );
     }
@@ -89,7 +89,7 @@ pub unsafe fn inb(port: u16) -> u8 {
 
     unsafe {
         asm!("in al, dx",
-            in("dx") port, 
+            in("dx") port,
             out("al") value,
             options(nomem, nostack, preserves_flags)
         );
@@ -98,13 +98,15 @@ pub unsafe fn inb(port: u16) -> u8 {
     value
 }
 
-pub fn io_wait(){
-    unsafe { outb(WAIT_PORT, 0); }
+pub fn io_wait() {
+    unsafe {
+        outb(WAIT_PORT, 0);
+    }
 }
 
 const PIT_INPUT_HZ: u32 = 1_193_182;
 pub const TIMER_HZ: u32 = 100;
-const PIT_DIVISOR:u16 = (PIT_INPUT_HZ / TIMER_HZ) as u16;
+const PIT_DIVISOR: u16 = (PIT_INPUT_HZ / TIMER_HZ) as u16;
 
 const PIT_COMMAND: u8 = 0x36;
 const PIT_PORT_COMMAND: u16 = 0x43;

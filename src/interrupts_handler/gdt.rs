@@ -2,8 +2,8 @@
 // We need to give a safe stack to use to the CPU
 // We do this using the GDT
 
-use lazy_static::lazy_static;
 use core::{arch::asm, cell::UnsafeCell};
+use lazy_static::lazy_static;
 
 const TSS_LENGTH: usize = 104;
 const STACK_SIZE: usize = 4096 * 5;
@@ -36,10 +36,10 @@ const _: () = {
     assert!(high == 0x0000_0000_1122_3344);
 };
 
-#[repr(C,packed(4))]
+#[repr(C, packed(4))]
 pub struct Tss {
     reserved0: u32,
-    rsp: [u64; 3], // Useful for later user mode apparently 
+    rsp: [u64; 3], // Useful for later user mode apparently
     reserved1: u64,
     ist: [u64; 7],
     reserved2: u64,
@@ -47,15 +47,18 @@ pub struct Tss {
     iomap_base: u16,
 }
 
-#[repr(C,packed)]
+#[repr(C, packed)]
 struct Gdtr {
     limit: u16,
     base: u64,
 }
 
 impl Gdtr {
-    fn new (limit: u16, base: u64) -> Self {
-        Gdtr { limit: limit, base: base }
+    fn new(limit: u16, base: u64) -> Self {
+        Gdtr {
+            limit: limit,
+            base: base,
+        }
     }
 }
 
@@ -67,12 +70,12 @@ static DF_STACK: Stack = Stack(UnsafeCell::new([0; STACK_SIZE]));
 
 pub struct Gdt {
     // null, kernel code, kernel data, TSS x 2
-    gdt: [u64; 5]
+    gdt: [u64; 5],
 }
 
 impl Gdt {
-    fn new () -> Self {
-        let (low, high) = tss_encoder(&* TSS as *const Tss as u64, (TSS_LENGTH - 1) as u64);
+    fn new() -> Self {
+        let (low, high) = tss_encoder(&*TSS as *const Tss as u64, (TSS_LENGTH - 1) as u64);
         let gdt_array = [0, KERNEL_CODE, KERNEL_DATA, low, high];
         Gdt { gdt: gdt_array }
     }
@@ -86,22 +89,21 @@ lazy_static! {
     pub static ref GDT: Gdt = Gdt::new();
 }
 
-
 const _: () = assert!(size_of::<Tss>() == TSS_LENGTH);
 
 impl Tss {
-    fn new() -> Self {    
+    fn new() -> Self {
         let stack_start = DF_STACK.0.get() as u64;
         let stack_top = stack_start + STACK_SIZE as u64;
-        let ist: [u64; 7] = [stack_top, 0,0,0,0,0,0];
-        Tss { 
-            reserved0: 0, 
-            rsp: [0; 3], 
-            reserved1: 0, 
+        let ist: [u64; 7] = [stack_top, 0, 0, 0, 0, 0, 0];
+        Tss {
+            reserved0: 0,
+            rsp: [0; 3],
+            reserved1: 0,
             ist: ist,
-            reserved2: 0, 
-            reserved3: 0, 
-            iomap_base: TSS_LENGTH as u16, 
+            reserved2: 0,
+            reserved3: 0,
+            iomap_base: TSS_LENGTH as u16,
         }
     }
 }
@@ -110,7 +112,7 @@ const fn descriptor(access: u8, flag: u8) -> u64 {
     ((access as u64) << 40) | (((flag as u64) & 0xF) << 52)
 }
 
-const fn tss_encoder (base: u64, limit: u64) -> (u64, u64) {
+const fn tss_encoder(base: u64, limit: u64) -> (u64, u64) {
     let low_limit = limit & 0xffff;
     let base_low = (base & 0xffffff) << 16;
     let flag_access = descriptor(0x89, 0);
@@ -125,13 +127,13 @@ const fn tss_encoder (base: u64, limit: u64) -> (u64, u64) {
     (first_result, second_result)
 }
 
-pub fn gdt_init () {
+pub fn gdt_init() {
     let gdtr = Gdtr::new((GDT_LENGTH - 1) as u16, &GDT.gdt as *const _ as u64);
 
-    unsafe { 
+    unsafe {
         asm!("lgdt [{}]", 
             in(reg) &gdtr, 
-            options(readonly, nostack, preserves_flags)); 
+            options(readonly, nostack, preserves_flags));
 
         asm!(
             "push {sel}",

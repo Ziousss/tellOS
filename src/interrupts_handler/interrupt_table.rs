@@ -14,7 +14,6 @@ pub(super) const GATE_INTERRUPT: u8 = 0xE;
 #[allow(dead_code)]
 pub(super) const GATE_TRAP: u8 = 0xF;
 
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(C, packed)]
 pub struct Idtr {
@@ -47,7 +46,7 @@ pub struct InterruptStackFrame {
     pub cs: u64,
     pub rflags: u64,
     pub rsp: u64,
-    pub ss: u64
+    pub ss: u64,
 }
 
 // Making sure the size are right.
@@ -69,41 +68,44 @@ impl IdtEntry {
         }
     }
 
-    pub const fn with_ist(mut self, index: u8) -> Self{
+    pub const fn with_ist(mut self, index: u8) -> Self {
         self.ist_index = index & 0b111;
         self
-    } 
+    }
 
-    pub fn new(handler_addr: u64, attribute: u8, selector: u16) -> Self {        
-        Self { 
-            handler_lowest_16: handler_addr as u16, 
-            code_segment_selector: selector, 
-            ist_index: 0, 
-            type_and_attribute: attribute, 
-            handler_16_31: (handler_addr >> 16) as u16, 
-            handler_32_63: (handler_addr >> 32) as u32, 
-            reserved: 0 
+    pub fn new(handler_addr: u64, attribute: u8, selector: u16) -> Self {
+        Self {
+            handler_lowest_16: handler_addr as u16,
+            code_segment_selector: selector,
+            ist_index: 0,
+            type_and_attribute: attribute,
+            handler_16_31: (handler_addr >> 16) as u16,
+            handler_32_63: (handler_addr >> 32) as u32,
+            reserved: 0,
         }
     }
 }
 
 impl Idt {
     pub const fn new() -> Self {
-        Self { entries: [IdtEntry::missing(); 256] }
+        Self {
+            entries: [IdtEntry::missing(); 256],
+        }
     }
 
     pub fn set_entry(&mut self, vector_index: u8, idt_entry: IdtEntry) {
         self.entries[vector_index as usize] = idt_entry;
     }
 
-    pub fn load(&'static self){
+    pub fn load(&'static self) {
         let idtr = Idtr {
             limit: (IDT_LENGTH - 1) as u16,
             base: self as *const Idt as u64,
         };
 
-        unsafe { asm!("lidt [{}]", 
-            in(reg) &idtr, 
+        unsafe {
+            asm!("lidt [{}]", 
+            in(reg) &idtr,
             options(readonly, nostack, preserves_flags));
         }
     }

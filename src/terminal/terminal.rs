@@ -1,11 +1,12 @@
 // This file is here to handle everything that has a link
 // with the OS' terminal.
 
-use crate::terminal::built_in::{clear_builtin, echo_builtin, help_builtin, uptime_builtin};
+use crate::interrupts_handler;
+use crate::terminal::built_in::{
+    clear_builtin, crash_builtin, echo_builtin, help_builtin, uptime_builtin,
+};
 use crate::{print, println};
 use core::{arch::asm, str::from_utf8};
-use crate::interrupts_handler;
-
 
 const LINE_CAPACITY: usize = 256;
 
@@ -20,7 +21,7 @@ impl Line {
         Line {
             buf: [0u8; LINE_CAPACITY],
             len: 0,
-            alt_pending: false
+            alt_pending: false,
         }
     }
 }
@@ -31,9 +32,11 @@ pub fn run() {
 
     //Waiting for something to happen.
     loop {
-        unsafe { asm!("hlt", options(nomem, nostack, preserves_flags)); }
+        unsafe {
+            asm!("hlt", options(nomem, nostack, preserves_flags));
+        }
 
-        while let Some(c) = interrupts_handler::pop_key() {            
+        while let Some(c) = interrupts_handler::pop_key() {
             handle_key(c, &mut line_struct);
         }
     }
@@ -92,10 +95,12 @@ fn handle_key(c: u8, line_struct: &mut Line) {
 fn handle_alt(value: u8, line_struct: &mut Line) {
     match value {
         0x08 => {
-            while line_struct.len > 0 && line_struct.buf[line_struct.len - 1] == b' ' {      // skip trailing spaces
+            while line_struct.len > 0 && line_struct.buf[line_struct.len - 1] == b' ' {
+                // skip trailing spaces
                 delete_last(line_struct);
             }
-            while line_struct.len > 0 && line_struct.buf[line_struct.len - 1] != b' ' {      // delete the word
+            while line_struct.len > 0 && line_struct.buf[line_struct.len - 1] != b' ' {
+                // delete the word
                 delete_last(line_struct);
             }
         }
@@ -138,6 +143,9 @@ fn command_handle(line_struct: &mut Line) {
         // Clear handle
         (Some("clear"), None, None) => clear_builtin(),
         (Some("clear"), _, _) => println!("clear takes no argument"),
+
+        //crash test
+        (Some("crash"), _, _) => crash_builtin(),
         (Some(other), _, _) => println!("{}: command not found", other),
         (None, _, _) => {}
     }

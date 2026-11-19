@@ -1,11 +1,11 @@
 use core::str::SplitAsciiWhitespace;
 
-use crate::vga_buffer::clear_screen;
-use crate::{println, print};
 use crate::interrupts_handler::read_timer_seconds;
+use crate::vga_buffer::clear_screen;
+use crate::{print, println};
+use core::arch::asm;
 
-
-pub fn help_builtin () {
+pub fn help_builtin() {
     println!("Available functions:");
     println!();
     println!("- clear: Clears the screen");
@@ -21,8 +21,12 @@ pub fn uptime_builtin() {
     let secs = total % 60;
 
     print!("Uptime =");
-    if hours > 0 { print!(" {} hour{}", hours, plural(hours)); }
-    if mins > 0  { print!(" {} minute{}", mins, plural(mins)); }
+    if hours > 0 {
+        print!(" {} hour{}", hours, plural(hours));
+    }
+    if mins > 0 {
+        print!(" {} minute{}", mins, plural(mins));
+    }
     print!(" {} second{}", secs, plural(secs));
     println!();
 }
@@ -32,8 +36,7 @@ fn plural(n: u64) -> &'static str {
 }
 
 pub fn echo_builtin(mut words: SplitAsciiWhitespace<'_>) {
-    let mut newline = true; 
-
+    let mut newline = true;
 
     let _ = words.next();
     if let Some(first_arg) = words.next() {
@@ -66,13 +69,17 @@ pub fn echo_builtin(mut words: SplitAsciiWhitespace<'_>) {
         } else {
             break;
         }
-    }    
+    }
 
     if newline {
         println!();
     }
 }
 
-pub fn clear_builtin () {
+pub fn clear_builtin() {
     clear_screen();
+}
+
+pub fn crash_builtin() {
+    unsafe { asm!("mov rsp, 0", "int3") }
 }

@@ -1,15 +1,21 @@
+use crate::interrupts_handler::{
+    gdt::gdt_init,
+    handlers::{
+        KEYBOARD_VECTOR, PIC_1_OFFSET, PIC_2_OFFSET, TIMER_VECTOR, divide_error_handler,
+        double_fault_handler, gpf_handler, invalid_opcode_handler, keyboard_handler,
+        page_fault_handler,
+    },
+    pic::{ChainedPics, pit_init},
+};
 use core::arch::asm;
-use crate::interrupts_handler::{gdt::gdt_init, handlers::{KEYBOARD_VECTOR, PIC_1_OFFSET, PIC_2_OFFSET, TIMER_VECTOR, divide_error_handler, double_fault_handler, gpf_handler, invalid_opcode_handler, keyboard_handler, page_fault_handler}, pic::{ChainedPics, pit_init}};
 use handlers::{breakpoint_handler, timer_handler};
 
-use self::interrupt_table::{
-    Idt, IdtEntry, PRESENT, DPL_KERNEL, GATE_INTERRUPT,
-};
+use self::interrupt_table::{DPL_KERNEL, GATE_INTERRUPT, Idt, IdtEntry, PRESENT};
 
+mod gdt;
+mod handlers;
 mod interrupt_table;
 mod pic;
-mod handlers;
-mod gdt;
 
 pub use handlers::{pop_key, read_timer_seconds};
 
@@ -33,6 +39,14 @@ pub fn read_cr2() -> u64 {
     value
 }
 
+pub fn read_cr3() -> u64 {
+    let value: u64;
+    unsafe {
+        asm!("mov {}, cr3", out(reg) value, options(nomem, nostack, preserves_flags));
+    }
+    value
+}
+
 // Initialises the Interrupt Descriptor Table (IDT) and configures
 // the interrupt handlers.
 //
@@ -46,14 +60,47 @@ pub fn init() {
     let selector = read_cs();
     let attribute = PRESENT | DPL_KERNEL | GATE_INTERRUPT;
 
-    let entry_0 = IdtEntry::new(divide_error_handler as *const () as usize as u64, attribute, selector);
-    let entry_3 = IdtEntry::new(breakpoint_handler as *const () as usize as u64, attribute, selector);
-    let entry_6 = IdtEntry::new(invalid_opcode_handler as *const () as usize as u64, attribute, selector);
-    let entry_8 = IdtEntry::new(double_fault_handler as *const () as usize as u64, attribute, selector).with_ist(DOUBLE_FAULT_IST);
-    let entry_13 = IdtEntry::new(gpf_handler as *const () as usize as u64, attribute, selector);
-    let entry_14 = IdtEntry::new(page_fault_handler as *const () as usize as u64, attribute, selector);
-    let timer_entry = IdtEntry::new(timer_handler as *const() as usize as u64, attribute, selector);
-    let keyboard_entry = IdtEntry::new(keyboard_handler as *const() as usize as u64, attribute, selector);
+    let entry_0 = IdtEntry::new(
+        divide_error_handler as *const () as usize as u64,
+        attribute,
+        selector,
+    );
+    let entry_3 = IdtEntry::new(
+        breakpoint_handler as *const () as usize as u64,
+        attribute,
+        selector,
+    );
+    let entry_6 = IdtEntry::new(
+        invalid_opcode_handler as *const () as usize as u64,
+        attribute,
+        selector,
+    );
+    let entry_8 = IdtEntry::new(
+        double_fault_handler as *const () as usize as u64,
+        attribute,
+        selector,
+    )
+    .with_ist(DOUBLE_FAULT_IST);
+    let entry_13 = IdtEntry::new(
+        gpf_handler as *const () as usize as u64,
+        attribute,
+        selector,
+    );
+    let entry_14 = IdtEntry::new(
+        page_fault_handler as *const () as usize as u64,
+        attribute,
+        selector,
+    );
+    let timer_entry = IdtEntry::new(
+        timer_handler as *const () as usize as u64,
+        attribute,
+        selector,
+    );
+    let keyboard_entry = IdtEntry::new(
+        keyboard_handler as *const () as usize as u64,
+        attribute,
+        selector,
+    );
 
     unsafe {
         let idt: &'static mut Idt = &mut *(&raw mut IDT);
@@ -73,6 +120,7 @@ pub fn init() {
     pics.initialise();
 
     pit_init();
-
-    unsafe { asm!("sti", options(nomem, nostack)); }
+    unsafe {
+        asm!("sti", options(nomem, nostack));
+    }
 }

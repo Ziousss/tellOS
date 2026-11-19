@@ -1,36 +1,46 @@
-#![feature(lang_items)]
-#![allow(internal_features)]
 #![no_std]
 #![feature(abi_x86_interrupt)]
 
-use core::arch::asm;
+use core::{arch::asm, panic};
 
-use crate::vga_buffer::clear_screen;
+use crate::{interrupts_handler::read_cr3, memory::memory_init, vga_buffer::clear_screen};
 
-mod vga_buffer;
 mod interrupts_handler;
+mod memory;
 mod terminal;
+mod vga_buffer;
 
 // This is the main rust function.
 // It is called at the end of the assembly code.
 #[unsafe(no_mangle)]
-pub extern "C" fn rust_init() {
+pub extern "C" fn rust_init(multiboot_info: u64) {
+    // First thing to do!
     clear_screen();
-    interrupts_handler::init();
-    println!("Terminal ready to use!!");
 
-    // Put in another file for clarity.
-    terminal::run();
+    let res = memory_init(multiboot_info);
+    if res == Err(()) {
+        println!("Error in mutliboot_init");
+        panic!()
+    }
+
+    println!("Kernel ready to use!!");
+
+    loop {
+        unsafe {
+            asm!("hlt", options(nomem, nostack, preserves_flags));
+        }
+    }
 }
-
-#[lang = "eh_personality"]
-pub extern "C" fn eh_personality() {}
 
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
-    unsafe { crate::vga_buffer::WRITER.force_unlock(); }
+    unsafe {
+        crate::vga_buffer::WRITER.force_unlock();
+    }
     println!("KERNEL PANIC: {}", info);
     loop {
-        unsafe { asm!("hlt", options(nomem, nostack, preserves_flags)); }
+        unsafe {
+            asm!("hlt", options(nomem, nostack, preserves_flags));
+        }
     }
 }

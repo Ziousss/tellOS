@@ -30,13 +30,13 @@ impl Writer {
     // on its value (and flags such sa SHIFT or CTRL later).
     pub fn write_byte(&mut self, byte: u8) {
         match byte {
-            b'\n' => { 
+            b'\n' => {
                 self.new_line();
-            },
+            }
 
             b'\t' => {
                 let delta = 4 - (self.column_position % 4);
-                for _ in 0..delta{
+                for _ in 0..delta {
                     self.write_byte(b' ');
                 }
             }
@@ -82,25 +82,24 @@ impl Writer {
             }
         }
     }
-    
-    fn new_line(&mut self){
-        if self.row == 24 {
+
+    fn new_line(&mut self) {
+        if self.row == BUFFER_HEIGHT - 1 {
             for row in 1..BUFFER_HEIGHT {
                 for col in 0..BUFFER_WIDTH {
-                    self.buffer.chars[row-1][col].write(self.buffer.chars[row][col].read())
+                    self.buffer.chars[row - 1][col].write(self.buffer.chars[row][col].read())
                 }
             }
             self.clear_row(BUFFER_HEIGHT - 1);
-        }
-        else {
+        } else {
             self.row += 1;
         }
-        
+
         self.column_position = 0;
     }
 
     pub fn clear_screen(&mut self) {
-        for row in 0..BUFFER_HEIGHT{
+        for row in 0..BUFFER_HEIGHT {
             self.clear_row(row);
         }
 
@@ -108,13 +107,12 @@ impl Writer {
         self.row = 0;
     }
 
-
     fn clear_row(&mut self, row: usize) {
         let blank = ScreenChar {
             ascii_character: b' ',
             colour_code: self.colour_code,
         };
-        for col in 0..BUFFER_WIDTH{
+        for col in 0..BUFFER_WIDTH {
             self.buffer.chars[row][col].write(blank);
         }
     }

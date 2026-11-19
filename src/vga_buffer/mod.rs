@@ -1,7 +1,7 @@
 // This file purpose's is mainly to handle write macros.
 
-use core::fmt;
 use colour::{Colour, VgaAttribute};
+use core::fmt;
 
 mod buffer;
 mod colour;
@@ -26,6 +26,6 @@ macro_rules! println {
     ($($arg:tt)*) => ($crate::print!("{}\n", format_args!($($arg)*)));
 }
 
-pub fn clear_screen(){
+pub fn clear_screen() {
     WRITER.lock().clear_screen();
 }

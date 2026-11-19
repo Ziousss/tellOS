@@ -3,7 +3,12 @@
 global start
 extern long_mode_start
 
+global multiboot_ptr
 section .bss
+align 8
+multiboot_ptr:
+    resd 1
+
 boot_stack_bottom:
     resb 131072
 boot_stack_top:
@@ -21,6 +26,7 @@ section .text
 bits 32
 
 start:
+    mov [multiboot_ptr], ebx ; Saves info given by multiboot into an unsued register.
     mov esp, boot_stack_top
 
     call check_multiboot
